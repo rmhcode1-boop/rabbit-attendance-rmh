@@ -199,5 +199,5 @@ window.boot=async function(){applyTheme();
   try{const r=await D.api('/api/me');AUTH.allowSignup=r.allowSignup!==false;if(r.needSetup)return authScreen('setup');
     const rt=/^#\/reset\?token=([a-f0-9]+)/.exec(location.hash);if(!r.user&&rt)return authScreen('reset',{token:rt[1]});
     if(!r.user)return authScreen('signin');await start()}
-  catch(e){document.body.insertAdjacentHTML('beforeend','<div class="empty" style="padding:80px 20px">Cannot reach the server. Start it with <b>npm run dev</b> and open the app at the address it prints.</div>')}};
+  catch(e){document.body.insertAdjacentHTML('beforeend','<div class="empty" style="padding:80px 20px">Cannot reach the attendance server. If you run this system, make sure the Node server is running (<b>npm run dev</b>) and open the address it prints. Static hosts such as Vercel cannot run it.</div>')}};
 })();
