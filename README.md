@@ -1,7 +1,7 @@
 # Rabbit Marketing House — Attendance & HR
 
 Attendance, timesheets, leave approval (Employee → Manager → Admin), tasks, chat, holidays and reports.
-Zero npm dependencies. Needs **Node 22.5+** (uses the built-in `node:sqlite`).
+Needs **Node 22.5+**. Local use has zero npm dependencies (built-in `node:sqlite`); the Postgres option uses the `pg` package.
 
 ## Run locally
 ```
@@ -21,15 +21,22 @@ On first start the page asks you to create the first **Admin** account. Data is 
 > remove them before real staff use the system.
 
 ## Hosting (live link)
-This is a long-running Node server with a SQLite file, so it needs a host with a **persistent disk**
-(Render, Railway, Fly.io, a VPS, or an office PC). It cannot run on Vercel's serverless platform.
 
-**Render (included blueprint):** Render dashboard → *New* → *Blueprint* → select this repo → *Apply*.
-Then open the service → *Environment* → copy the generated `SETUP_CODE`. Open your `https://…onrender.com` address;
-the first screen asks for the setup code and creates the first Admin account.
+### Vercel + Neon Postgres (free tier friendly)
+The API runs as a Vercel serverless function (`api/[...path].js`) and stores data in Postgres.
+1. Import this repo into Vercel (Framework preset: *Other*; the included `vercel.json` sets the output folder to `public`).
+2. Project → **Storage** → **Create Database** → **Neon** → connect it to the project. This adds `DATABASE_URL` / `POSTGRES_URL`.
+3. Project → **Settings → Environment Variables**: add `SETUP_CODE` (any secret string).
+4. Redeploy. Open the site, enter the setup code, and create the first Admin account.
 
-Environment variables: `DATA_DIR` (where the database lives, must be on the persistent disk),
-`SETUP_CODE` (protects the first-run Admin screen), `TRUST_PROXY=1` (when behind a proxy), `PORT`.
+Browsers check for updates every 20 s on Vercel (6 s when self-hosted) to stay inside free-plan limits.
+
+### Self-hosting (office PC / VPS / Render / Railway)
+`npm run dev` runs the same code with a local SQLite file (`data/rmh.db`); set `DATABASE_URL` to use Postgres instead
+(run `npm install` first). A host with a persistent disk is required for SQLite — see `render.yaml`.
+
+Environment variables: `DATABASE_URL` (Postgres), `DATA_DIR` (SQLite folder), `SETUP_CODE` (protects first-run Admin screen),
+`TRUST_PROXY=1` (behind a proxy; automatic on Vercel), `PORT`.
 
 ## Roles
 Admin (everything) · Manager (own team: attendance, tasks, first-level leave approval, team reports) ·

@@ -8,5 +8,11 @@
     "start": "node server.js",
     "seed:demo": "node seed-demo.js",
     "reset:password": "node reset-password.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
+  "engines": {
+    "node": ">=22.5"
   }
 }

@@ -142,7 +142,7 @@ window.doBreak=function(){
   D.save();rerender()};
 
 /* ---------- sign in / sign up / forgot & reset password / first-run setup ---------- */
-const AUTH={allowSignup:true,needCode:false};
+const AUTH={allowSignup:true,needCode:false,pollMs:6000};
 function authScreen(mode,extra){
   if(mode===true)mode='setup';if(!mode)mode='signin';extra=extra||{};
   document.querySelectorAll('.auth').forEach(x=>x.remove());
@@ -184,7 +184,7 @@ function authScreen(mode,extra){
   setTimeout(()=>{const first=f.querySelector('input');if(first)first.focus()},50);
 }
 async function doLogout(){try{await D.api('/api/logout',{})}catch(e){}D.setToken('');D.stopPoll();D.clearData();$('#app').innerHTML='';history.replaceState(null,'','#/login');authScreen('signin')}
-async function start(){await D.load();if(!location.hash||location.hash==='#'||/^#\/(login|reset)/.test(location.hash))history.replaceState(null,'','#/dashboard');route();D.startPoll()}
+async function start(){await D.load();if(!location.hash||location.hash==='#'||/^#\/(login|reset)/.test(location.hash))history.replaceState(null,'','#/dashboard');route();D.startPoll(AUTH.pollMs)}
 
 PAGES.unauthorized=function(root){
   root.innerHTML=head('Access denied','')+'<div class="card" style="max-width:520px">'+U.empty('You don\'t have permission to open this page with your account ('+(ROLE_LABEL[D.me().role]||D.me().role)+').','lock')+'<p class="sm muted" style="text-align:center;margin:-6px 0 14px">Taking you back to your dashboard in <b id="ad-count">6</b>s…</p><div class="row" style="justify-content:center"><a class="btn primary" href="#/dashboard">Go to my dashboard</a></div></div>';
@@ -196,7 +196,7 @@ window.addEventListener('hashchange',route);
 window.addEventListener('resize',()=>{const c=innerWidth<720?'s':innerWidth<1100?'m':'l';if(resizeCat&&c!==resizeCat)render(true)});
 setInterval(()=>{ if(cur==='dashboard'){const c=$('#live-clock');if(c)c.textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) }},15000);
 window.boot=async function(){applyTheme();
-  try{const r=await D.api('/api/me');AUTH.allowSignup=r.allowSignup!==false;AUTH.needCode=!!r.needCode;if(r.needSetup)return authScreen('setup');
+  try{const r=await D.api('/api/me');AUTH.allowSignup=r.allowSignup!==false;AUTH.pollMs=r.pollMs||6000;AUTH.needCode=!!r.needCode;if(r.needSetup)return authScreen('setup');
     const rt=/^#\/reset\?token=([a-f0-9]+)/.exec(location.hash);if(!r.user&&rt)return authScreen('reset',{token:rt[1]});
     if(!r.user)return authScreen('signin');await start()}
   catch(e){$('#app').innerHTML='<div style="min-height:100vh;width:100%;flex:1;display:grid;place-items:center;padding:24px;background:var(--bg)"><div class="card" style="max-width:460px;text-align:center;padding:36px 28px"><div class="auth-logo-m" style="display:block"><img src="assets/logo.png" alt="Rabbit Marketing House"></div><h1 style="font-size:24px;margin-bottom:10px">Server not reachable</h1><p class="ink2" style="margin-bottom:20px;line-height:1.55">The attendance server is not running at this address. If you manage this system, start the Node server (<b>npm run dev</b>) or open the address where it is hosted. Static hosts such as Vercel cannot run it.</p><button class="btn primary" onclick="location.reload()">Try again</button></div></div>'}};

@@ -6,3 +6,4 @@ data
 server.js
 seed-demo.js
 reset-password.js
+render.yaml

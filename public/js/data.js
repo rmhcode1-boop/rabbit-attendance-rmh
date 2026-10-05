@@ -82,8 +82,9 @@ function save(){
       if(window.rerender)window.rerender()}
   }).finally(()=>{pending--});
 }
-async function poll(){
+async function poll(force){
   if(!db||pending>0)return;
+  if(document.hidden&&force!==true)return;
   try{
     const st=await api('/api/state?rev='+db.rev);
     if(st.same){const on=new Set(st.online);db.employees.forEach(e=>e.online=on.has(e.id));return}
@@ -93,7 +94,7 @@ async function poll(){
     if(window.rerender&&!busy)window.rerender();
   }catch(e){if(e.status===401)location.reload()}
 }
-function startPoll(){stopPoll();pollT=setInterval(poll,6000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()})}
+function startPoll(ms){stopPoll();pollT=setInterval(poll,ms||6000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll()})}
 function stopPoll(){clearInterval(pollT)}
 function clearData(){db=null}
 
