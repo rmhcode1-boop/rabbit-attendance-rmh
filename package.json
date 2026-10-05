@@ -1,0 +1,12 @@
+{
+  "name": "rmh-attendance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rabbit Marketing House – Attendance & Employee Management",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "seed:demo": "node seed-demo.js",
+    "reset:password": "node reset-password.js"
+  }
+}

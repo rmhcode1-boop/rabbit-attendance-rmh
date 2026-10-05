@@ -1,0 +1,9 @@
+# live data & secrets — never commit
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+node_modules/
+.claude/
+*.log
