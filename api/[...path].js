@@ -4,7 +4,8 @@ const core = require('../lib/core');
 let store = null;
 function getStore() {
   if (store) return store;
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL
+    || Object.values(process.env).find(v => typeof v === 'string' && (v.startsWith('postgres://') || v.startsWith('postgresql://'))); // any variable holding a Postgres address
   if (!url) return null;
   store = require('../lib/store-pg').create(url);
   return store;
