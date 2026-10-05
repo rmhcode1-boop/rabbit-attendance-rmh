@@ -142,7 +142,7 @@ window.doBreak=function(){
   D.save();rerender()};
 
 /* ---------- sign in / sign up / forgot & reset password / first-run setup ---------- */
-const AUTH={allowSignup:true};
+const AUTH={allowSignup:true,needCode:false};
 function authScreen(mode,extra){
   if(mode===true)mode='setup';if(!mode)mode='signin';extra=extra||{};
   document.querySelectorAll('.auth').forEach(x=>x.remove());
@@ -157,7 +157,7 @@ function authScreen(mode,extra){
     row='<label class="auth-check"><input type="checkbox" name="agree"> <span>I agree to follow the company\'s attendance &amp; privacy policies</span></label>';bottom='Already have an account? '+lnk('signin','Sign in')}
   else if(mode==='forgot'){h1='Forgot password?';btn='Request password reset';fields='<p class="auth-note">Enter your work email. Your Admin will be notified and will send you a reset link.</p>'+fld('Email address','Enter your work email','email','email','username');bottom=lnk('signin','← Back to sign in')}
   else if(mode==='reset'){h1='Choose a new password';btn='Update password';fields=fld('New password','At least 8 characters','password','password','new-password')+fld('Confirm new password','Repeat your password','password2','password','new-password')}
-  else{h1='Set up your workspace';btn='Create Admin account';fields='<p class="auth-note">Create the first Admin account. You can add your team afterwards.</p>'+fld('Your name','Enter your full name','name','text','name')+fld('Email address','Enter your email','email','email','username')+fld('Password','At least 8 characters','password','password','new-password')+fld('Confirm password','Repeat your password','password2','password','new-password')}
+  else{h1='Set up your workspace';btn='Create Admin account';fields='<p class="auth-note">Create the first Admin account. You can add your team afterwards.</p>'+(AUTH.needCode?fld('Setup code','Code from your hosting settings','code','password','off'):'')+fld('Your name','Enter your full name','name','text','name')+fld('Email address','Enter your email','email','email','username')+fld('Password','At least 8 characters','password','password','new-password')+fld('Confirm password','Repeat your password','password2','password','new-password')}
   const wave='';
   ov.innerHTML='<div class="auth-wrap"><aside class="auth-side"><i class="auth-layer l1"></i><i class="auth-layer l2"></i><i class="auth-layer l3"></i><h2 class="auth-welcome-t">Welcome to</h2><div class="auth-brand"><div class="auth-logo"><img src="assets/logo.png" alt="Rabbit Marketing House"></div><b>Rabbit Marketing House</b></div><p class="auth-desc">Attendance, leave, timesheets and team collaboration — everything your team needs, in one clean workspace.</p><div class="auth-foot-links"><span>ATTENDANCE</span><i></i><span>TIMESHEETS</span><i></i><span>LEAVE</span></div>'+wave+'</aside>'+
    '<form class="auth-main" autocomplete="on" novalidate><div class="auth-card"><div class="auth-logo-m"><img src="assets/logo.png" alt="Rabbit Marketing House"></div><h1>'+h1+'</h1><div class="auth-fields">'+fields+row+'</div><div class="auth-err" id="auth-err" role="alert"></div><button class="btn primary auth-btn" id="auth-go">'+btn+'</button>'+(bottom?'<p class="auth-bottom">'+bottom+'</p>':'')+'</div></form></div>';
@@ -175,7 +175,7 @@ function authScreen(mode,extra){
     if(mode==='signup'&&!f.agree.checked)return err('Please tick the box to agree to the policies');
     go.disabled=true;go.classList.add('loading');go.textContent=mode==='signin'?'Signing in…':'Please wait…';
     try{
-      if(mode==='signin'||mode==='setup'){await D.api(mode==='setup'?'/api/setup':'/api/login',{name:v('name'),email:v('email'),password:pw});ov.remove();history.replaceState(null,'','#/dashboard');await start();return}
+      if(mode==='signin'||mode==='setup'){await D.api(mode==='setup'?'/api/setup':'/api/login',{name:v('name'),email:v('email'),password:pw,code:f.code?f.code.value:''});ov.remove();history.replaceState(null,'','#/dashboard');await start();return}
       if(mode==='signup'){await D.api('/api/signup',{name:v('name'),email:v('email'),password:pw});return done('Request sent','Your Admin has been notified. You will be able to sign in as soon as your account is approved.','signin','Back to sign in')}
       if(mode==='forgot'){await D.api('/api/forgot',{email:v('email')});return done('Request received','If an account exists for that email, your Admin has been notified and will send you a password reset link.','signin','Back to sign in')}
       if(mode==='reset'){await D.api('/api/reset',{token:extra.token,password:pw});history.replaceState(null,'','#/dashboard');return done('Password updated','You can now sign in with your new password.','signin','Go to sign in')}
@@ -196,7 +196,7 @@ window.addEventListener('hashchange',route);
 window.addEventListener('resize',()=>{const c=innerWidth<720?'s':innerWidth<1100?'m':'l';if(resizeCat&&c!==resizeCat)render(true)});
 setInterval(()=>{ if(cur==='dashboard'){const c=$('#live-clock');if(c)c.textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}) }},15000);
 window.boot=async function(){applyTheme();
-  try{const r=await D.api('/api/me');AUTH.allowSignup=r.allowSignup!==false;if(r.needSetup)return authScreen('setup');
+  try{const r=await D.api('/api/me');AUTH.allowSignup=r.allowSignup!==false;AUTH.needCode=!!r.needCode;if(r.needSetup)return authScreen('setup');
     const rt=/^#\/reset\?token=([a-f0-9]+)/.exec(location.hash);if(!r.user&&rt)return authScreen('reset',{token:rt[1]});
     if(!r.user)return authScreen('signin');await start()}
   catch(e){document.body.insertAdjacentHTML('beforeend','<div class="empty" style="padding:80px 20px">Cannot reach the attendance server. If you run this system, make sure the Node server is running (<b>npm run dev</b>) and open the address it prints. Static hosts such as Vercel cannot run it.</div>')}};

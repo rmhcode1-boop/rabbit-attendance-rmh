@@ -5,6 +5,11 @@ const http = require('http'), fs = require('fs'), path = require('path'), crypto
 const { DatabaseSync } = require('node:sqlite');
 
 const root = __dirname, port = +process.env.PORT || 5173;
+// Hosting options (all optional):
+//   SETUP_CODE   – if set, the first-run "create Admin" screen asks for this code (stops strangers claiming Admin on a public URL)
+//   TRUST_PROXY  – set to 1 behind a reverse proxy (Render, Railway…) so rate limits use the real visitor IP
+const SETUP_CODE = process.env.SETUP_CODE || '';
+const clientIp = req => (process.env.TRUST_PROXY === '1' && String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()) || req.socket.remoteAddress;
 const dataDir = process.env.DATA_DIR || path.join(root, 'data');
 fs.mkdirSync(dataDir, { recursive: true });
 const db = new DatabaseSync(path.join(dataDir, 'rmh.db'));
@@ -391,13 +396,14 @@ async function api(req, res, url) {
   try {
     if (route === 'GET /api/me') {
       const users = db.prepare('SELECT COUNT(*) n FROM users').get().n;
-      if (!users) return send(res, 200, { needSetup: true });
+      if (!users) return send(res, 200, { needSetup: true, needCode: !!SETUP_CODE });
       const u = sessionUser(req), allowSignup = kvGet('settings').security.allowSignup !== false;
       return send(res, 200, u ? { user: u.id, allowSignup } : { user: null, allowSignup });
     }
     if (route === 'POST /api/setup') {
       if (db.prepare('SELECT COUNT(*) n FROM users').get().n) throw fail(403, 'Already set up');
       const b = await readBody(req), email = str(b.email, 120).trim().toLowerCase(), name = str(b.name, 80).trim();
+      if (SETUP_CODE && String(b.code || '') !== SETUP_CODE) throw fail(403, 'Incorrect setup code');
       if (!name || !validEmail(email) || String(b.password || '').length < 8) throw fail(400, 'Enter your name, a valid email and a password of at least 8 characters');
       putDoc('departments', { id: 'd1', name: 'General' });
       const admin = { id: 'e1', name, title: 'Administrator', dept: 'd1', role: 'Admin', joined: serverDate(), email, phone: '', color: '#2b2b30', status: 'Active' };
@@ -407,7 +413,7 @@ async function api(req, res, url) {
       return send(res, 200, { user: 'e1' });
     }
     if (route === 'POST /api/login') {
-      const b = await readBody(req), email = str(b.email, 120).trim().toLowerCase(), key = req.socket.remoteAddress + '|' + email;
+      const b = await readBody(req), email = str(b.email, 120).trim().toLowerCase(), key = clientIp(req) + '|' + email;
       if (throttled(key)) throw fail(429, 'Too many attempts. Try again in 15 minutes.');
       const row = db.prepare('SELECT * FROM users WHERE email=?').get(email);
       const ok = row && crypto.timingSafeEqual(Buffer.from(hashPw(String(b.password || ''), row.salt), 'hex'), Buffer.from(row.hash, 'hex'));
@@ -418,7 +424,7 @@ async function api(req, res, url) {
       startSession(res, emp.id); return send(res, 200, { user: emp.id });
     }
     if (route === 'POST /api/signup') {
-      const ip = req.socket.remoteAddress, key = 'su|' + ip;
+      const ip = clientIp(req), key = 'su|' + ip;
       if (throttled(key)) throw fail(429, 'Too many requests. Please try again later.');
       noteFail(key);
       const st = kvGet('settings');
@@ -438,7 +444,7 @@ async function api(req, res, url) {
       return send(res, 200, { ok: true });
     }
     if (route === 'POST /api/forgot') {
-      const ip = req.socket.remoteAddress, key = 'fp|' + ip;
+      const ip = clientIp(req), key = 'fp|' + ip;
       if (throttled(key)) throw fail(429, 'Too many requests. Please try again later.');
       noteFail(key);
       const b = await readBody(req), email = str(b.email, 120).trim().toLowerCase();
@@ -447,7 +453,7 @@ async function api(req, res, url) {
       return send(res, 200, { ok: true }); // same answer whether or not the email exists
     }
     if (route === 'POST /api/reset') {
-      const ip = req.socket.remoteAddress, key = 'rs|' + ip;
+      const ip = clientIp(req), key = 'rs|' + ip;
       if (throttled(key)) throw fail(429, 'Too many attempts. Please try again later.');
       const b = await readBody(req), pw = String(b.password || '');
       const h = crypto.createHash('sha256').update(String(b.token || '')).digest('hex');
